@@ -84,10 +84,14 @@ func (cr *xorChunkReader) readTimeStamp() int64 {
 	if dodBitSize > 0 {
 		dod = cr.readBits(uint32(dodBitSize))
 
-		if dodBitSize != 64 && dod >= (1<<(dodBitSize-1)) {
-			//need to convert number to negative is sign bit is on, else whn cast to int64 it will
+		if dodBitSize != 64 && dod > (1<<(dodBitSize-1)) {
+			//Need to convert number to negative is sign bit is on, else whn cast to int64 it will
 			//remain positive number.
-			dod = dod - (1 << dodBitSize)
+			//We are using dodBitSize bits to represent number in range
+			//[-(2^(dodBitSize - 1) -1), 2^(dodBitSize - 1)]
+			// e.g. if dodBitSize is 14, the number range is [-(2^13 - 1), (2^13)]
+
+			dod = dod - (1 << dodBitSize) //Flip the leading zeroes into 1s.
 		}
 	}
 
