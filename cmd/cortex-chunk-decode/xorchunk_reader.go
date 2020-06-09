@@ -63,21 +63,32 @@ func (cr *xorChunkReader) NextDatapoint() *datapoint {
 func (cr *xorChunkReader) readTimeStamp() int64 {
 	tCtrlBit := cr.readBits(1)
 
-	var dod uint64
+	var dodBitSize uint8
 	if tCtrlBit == 0 {
-		dod = 0
+		dodBitSize = 0
 	} else if tCtrlBit = cr.readBits(1); tCtrlBit == 0 {
 		//10 case
-		dod = cr.readBits(14)
+		dodBitSize = 14
 	} else if tCtrlBit = cr.readBits(1); tCtrlBit == 0 {
 		//110 case
-		dod = cr.readBits(17)
+		dodBitSize = 17
 	} else if tCtrlBit = cr.readBits(1); tCtrlBit == 0 {
 		//1110 case
-		dod = cr.readBits(20)
+		dodBitSize = 20
 	} else {
 		//1111 case
-		dod = cr.readBits(64)
+		dodBitSize = 64
+	}
+
+	var dod uint64
+	if dodBitSize > 0 {
+		dod = cr.readBits(uint32(dodBitSize))
+
+		if dodBitSize != 64 && dod >= (1<<(dodBitSize-1)) {
+			//need to convert number to negative is sign bit is on, else whn cast to int64 it will
+			//remain positive number.
+			dod = dod - (1 << dodBitSize)
+		}
 	}
 
 	return int64(dod) + cr.prevTimeDelta + cr.prevDp.timestamp
