@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,13 +12,8 @@ import (
 	"github.com/golang/snappy"
 )
 
-type datapoint struct {
-	timestamp uint64
-	value     float64
-}
-
-func run() error {
-	in, err := ioutil.ReadAll(os.Stdin)
+func run(reader io.Reader) error {
+	in, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return err
 	}
@@ -59,7 +55,17 @@ func printXorChunks(raw []byte, numChunks uint16) {
 
 func printXorChunk(raw []byte) {
 	numSamplePoints := binary.BigEndian.Uint16(raw)
+	cr := NewXorChunkReader(raw[2:])
+
 	fmt.Printf("\tnumber of sample points: %v\n", numSamplePoints)
+
+	dps := make([]*datapoint, 0)
+	for i := 0; i < int(numSamplePoints); i++ {
+		dp := cr.NextDatapoint()
+		dps = append(dps, dp)
+	}
+
+	fmt.Printf("\tdata points: %v\n", dps)
 }
 
 func printMetadata(raw []byte) {
@@ -71,7 +77,20 @@ func printMetadata(raw []byte) {
 }
 
 func main() {
-	if err := run(); err != nil {
+	filePath := flag.String("f", "", "help message for flagname")
+	flag.Parse()
+	reader := os.Stdin
+	if len(*filePath) > 0 {
+		fileReader, err := os.Open(*filePath)
+		reader = fileReader
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to open file %v\n", *filePath)
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		defer reader.Close()
+	}
+	if err := run(reader); err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
 	}
