@@ -76,6 +76,7 @@ func (cr *xorChunkReader) readTimeStamp() int64 {
 		//1110 case
 		dod = cr.readBits(20)
 	} else {
+		//1111 case
 		dod = cr.readBits(64)
 	}
 
