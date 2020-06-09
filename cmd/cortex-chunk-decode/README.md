@@ -1,0 +1,1 @@
+Decoder for Cortex chunks stored in DynamoDB as an exercise to learn Go.
